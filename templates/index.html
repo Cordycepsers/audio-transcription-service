@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Transcription App</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Align to top for better scroll with content */
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f7f9;
+            color: #333;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        p.subtitle { /* Differentiate from other p tags if needed */
+            color: #555;
+            margin-bottom: 25px;
+            font-size: 0.95em;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+            align-items: center;
+        }
+
+        #fileInput {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            width: 90%;
+            max-width: 350px;
+            cursor: pointer;
+        }
+
+        #fileInput::file-selector-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        #fileInput::file-selector-button:hover {
+            background-color: #2980b9;
+        }
+
+
+        #transcribeButton, #downloadButton {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: auto;
+        }
+
+        #transcribeButton:disabled, #downloadButton:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        #transcribeButton:hover:not(:disabled) {
+            background-color: #229954;
+        }
+        
+        #downloadButton {
+            background-color: #3498db; /* Different color for distinction */
+            margin-top: 15px;
+        }
+
+        #downloadButton:hover:not(:disabled) {
+            background-color: #2980b9;
+        }
+
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto; /* Centered within its container */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0; /* Added margin for spacing */
+        }
+        .loading-container p {
+            margin: 0;
+            font-size: 0.9em;
+        }
+
+        .results {
+            margin-top: 20px;
+            text-align: left;
+            width: 100%;
+        }
+
+        .results h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        #transcriptionOutput {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            min-height: 100px;
+            max-height: 300px; /* Added max-height */
+            overflow-y: auto; /* Added scroll for long transcripts */
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: "Courier New", Courier, monospace;
+            border: 1px solid #ddd;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            background-color: #fdecea;
+            border: 1px solid #e74c3c;
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        #fileNameDisplay {
+            margin-top: 10px;
+            font-style: italic;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.0.1"
+  }
+}
+</script>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Transcription App</h1>
+        <p class="subtitle">Upload an MP3 or MP4 file to transcribe its audio content. This app uses a backend server to process your request securely.</p>
+
+        <div class="controls">
+            <input type="file" id="fileInput" accept=".mp3,.mp4,audio/mpeg,audio/mp4,video/mp4" aria-label="Audio or video file input (.mp3, .mp4)">
+            <div id="fileNameDisplay">No file selected.</div>
+            <button id="transcribeButton" aria-label="Transcribe audio">Transcribe</button>
+        </div>
+
+        <div id="loadingContainer" style="display: none;">
+            <div class="loading-spinner" aria-hidden="true"></div>
+            <p aria-live="polite">Transcribing, please wait...</p>
+        </div>
+        
+        <div class="results">
+            <h2>Transcription:</h2>
+            <pre id="transcriptionOutput" aria-live="polite"></pre>
+            <button id="downloadButton" aria-label="Download transcript" disabled>Download Transcript</button>
+        </div>
+
+        <div id="errorDisplay" class="error-message" style="display: none;" role="alert"></div>
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='index.tsx') }}"></script>
+</body>
+</html>

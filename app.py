@@ -1,6 +1,7 @@
 # app.py
 import os
 import base64
+import json
 import logging
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, send_from_directory
@@ -23,8 +24,24 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # --- Configuration ---
 # Logging Setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-app.logger.setLevel(logging.INFO) # Use Flask's logger
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
+)
+app.logger.setLevel(logging.DEBUG) # Use Flask's logger with debug level
+app.logger.info("Starting Flask application with Google Sheets integration")
+
+# Google Sheets Configuration
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+GOOGLE_SHEET_ID = os.getenv('GOOGLE_SHEET_ID')  # Get the sheet ID from environment variable
+GSHEET_WORKSHEET_NAME = os.getenv('GSHEET_WORKSHEET_NAME', 'TRANSCRIPT FINAL')
+GOOGLE_SHEETS_CREDS_FILE = os.path.join(BASE_DIR, 'service-account.json')
+GOOGLE_SERVICE_ACCOUNT_EMAIL = os.getenv('GOOGLE_SERVICE_ACCOUNT_EMAIL', 'transcript@transcript-460922.iam.gserviceaccount.com')
+
+app.logger.info(f"Base directory: {BASE_DIR}")
+app.logger.info(f"Service account file path: {GOOGLE_SHEETS_CREDS_FILE}")
+app.logger.info(f"Service account exists: {os.path.exists(GOOGLE_SHEETS_CREDS_FILE)}")
+GOOGLE_SHEETS_SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 # Uploads directory for temporary audio files
 UPLOAD_FOLDER = 'uploads'
@@ -36,13 +53,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 WHISPER_MODEL_NAME = os.getenv("WHISPER_MODEL", "base.en")
 COMPUTE_TYPE = os.getenv("COMPUTE_TYPE", "int8") # "float16" for GPU, "int8" for CPU
 DEVICE = os.getenv("DEVICE", "cpu") # "cuda" if NVIDIA GPU and CUDA are available
-
-# Google Sheets Configuration from .env
-GOOGLE_SHEET_ID = os.getenv('GOOGLE_SHEET_ID')
-GSHEET_WORKSHEET_NAME = os.getenv('GSHEET_WORKSHEET_NAME', 'Transcripts')
-GSHEET_SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-GSHEET_CREDENTIALS_FILE = 'credentials.json'
-GSHEET_TOKEN_PICKLE = 'token.pickle'
 
 # --- NLTK 'punkt' Tokenizer Download ---
 try:
@@ -113,64 +123,37 @@ gspread_client_instance = None # Global gspread client
 
 def get_gspread_client():
     """
-    Authenticates with Google Sheets API and returns a gspread client.
-    Caches the client instance.
+    Authenticates with Google Sheets API using service account credentials
+    and returns a gspread client. Caches the client instance.
     """
     global gspread_client_instance
-    if gspread_client_instance:
-        # Check if token needs refresh (simplified check, gspread might handle this internally too)
-        if hasattr(gspread_client_instance, 'auth') and gspread_client_instance.auth.expired and gspread_client_instance.auth.refresh_token:
-            try:
-                gspread_client_instance.auth.refresh(Request())
-                app.logger.info("Google Sheets token refreshed.")
-            except Exception as e:
-                app.logger.warning(f"Failed to refresh Google Sheets token: {e}. Will try re-authentication.")
-                gspread_client_instance = None # Force re-auth
-
+    
     if gspread_client_instance is None:
-        creds = None
-        if os.path.exists(GSHEET_TOKEN_PICKLE):
-            with open(GSHEET_TOKEN_PICKLE, 'rb') as token_file:
-                creds = pickle.load(token_file)
+        service_account_file = GOOGLE_SHEETS_CREDS_FILE
         
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
+        try:
+            if not os.path.exists(service_account_file):
+                app.logger.error(f"Service account credentials file '{service_account_file}' not found.")
+                app.logger.error(f"Please ensure the service account ({GOOGLE_SERVICE_ACCOUNT_EMAIL}) has access to the sheet.")
+                return None
+            
+            gspread_client_instance = gspread.service_account(filename=service_account_file)
+            app.logger.info("Successfully authorized gspread client using service account.")
+            
+            # Test the connection by trying to open the spreadsheet
+            if GOOGLE_SHEET_ID:
                 try:
-                    creds.refresh(Request())
-                    app.logger.info("Google Sheets token refreshed during client acquisition.")
-                except Exception as e:
-                    app.logger.warning(f"Failed to refresh token: {e}. Re-authenticating.")
-                    creds = None
-            if not creds:
-                if not os.path.exists(GSHEET_CREDENTIALS_FILE):
-                    app.logger.error(f"Google Sheets credentials file ('{GSHEET_CREDENTIALS_FILE}') not found.")
-                    # Not raising FileNotFoundError here as it's a server, 
-                    # it should log and potentially skip GSheet operations.
-                    return None 
-                
-                # For server environments, run_local_server might not be ideal.
-                # Consider service account or pre-authorized token.pickle for production.
-                flow = InstalledAppFlow.from_client_secrets_file(GSHEET_CREDENTIALS_FILE, GSHEET_SCOPES)
-                app.logger.info("Attempting to run local server for Google OAuth. This may require browser interaction.")
-                try:
-                    # This part might hang if no browser interaction is possible
-                    creds = flow.run_local_server(port=0) 
-                except Exception as e:
-                    app.logger.error(f"Could not complete OAuth flow: {e}. "
-                                     "Ensure you can complete browser authentication or use a pre-authorized token.pickle / service account.")
+                    gspread_client_instance.open_by_key(GOOGLE_SHEET_ID)
+                    app.logger.info("Successfully connected to Google Sheet.")
+                except gspread.exceptions.APIError as e:
+                    app.logger.error(f"Failed to access Google Sheet: {e}")
+                    if "Google Sheets API has not been used" in str(e):
+                        app.logger.error("Please enable Google Sheets API for the service account.")
                     return None
-
-            if creds:
-                with open(GSHEET_TOKEN_PICKLE, 'wb') as token_file:
-                    pickle.dump(creds, token_file)
-                app.logger.info(f"OAuth token saved to {GSHEET_TOKEN_PICKLE}")
-        
-        if creds:
-            gspread_client_instance = gspread.authorize(creds)
-            app.logger.info("Successfully authorized gspread client.")
-        else:
-            app.logger.error("Failed to obtain Google API credentials.")
-            return None
+                
+        except Exception as e:
+            app.logger.error(f"Failed to initialize gspread client: {e}")
+            gspread_client_instance = None
             
     return gspread_client_instance
 
@@ -182,21 +165,40 @@ def write_to_google_sheet(audio_filename: str, transcript_text: str):
         app.logger.info("GOOGLE_SHEET_ID not set. Skipping Google Sheets update.")
         return True # Indicate success as it's an optional step
 
+    app.logger.info("=" * 50)
+    app.logger.info("Google Sheets Integration")
+    app.logger.info("=" * 50)
+    app.logger.info(f"Sheet ID: {GOOGLE_SHEET_ID}")
+    app.logger.info(f"Worksheet: {GSHEET_WORKSHEET_NAME}")
+    app.logger.info(f"Service Account: {GOOGLE_SERVICE_ACCOUNT_EMAIL}")
+    app.logger.info(f"Credentials File: {GOOGLE_SHEETS_CREDS_FILE}")
+    app.logger.info(f"Credentials Exist: {os.path.exists(GOOGLE_SHEETS_CREDS_FILE)}")
+
     client = get_gspread_client()
     if not client:
         app.logger.error("Failed to get gspread client. Skipping Google Sheets update.")
         return False
 
     try:
+        app.logger.info("Opening spreadsheet...")
         spreadsheet = client.open_by_key(GOOGLE_SHEET_ID)
         try:
             worksheet = spreadsheet.worksheet(GSHEET_WORKSHEET_NAME)
+            app.logger.info(f"Found worksheet: {GSHEET_WORKSHEET_NAME}")
+            
+            # Check if worksheet is empty or needs headers
+            values = worksheet.get_all_values()
+            if not values:
+                app.logger.info("Worksheet is empty, adding headers...")
+                headers = ["Timestamp", "Audio Filename", "Transcribed Text"]
+                worksheet.append_row(headers)
+                app.logger.info("Added headers to worksheet")
         except gspread.exceptions.WorksheetNotFound:
-            app.logger.info(f"Worksheet '{GSHEET_WORKSHEET_NAME}' not found. Creating it.")
+            app.logger.info(f"Worksheet '{GSHEET_WORKSHEET_NAME}' not found. Creating it...")
             worksheet = spreadsheet.add_worksheet(title=GSHEET_WORKSHEET_NAME, rows="100", cols="3")
             headers = ["Timestamp", "Audio Filename", "Transcribed Text"]
             worksheet.append_row(headers)
-            app.logger.info(f"Worksheet '{GSHEET_WORKSHEET_NAME}' created with headers.")
+            app.logger.info(f"Created worksheet '{GSHEET_WORKSHEET_NAME}' with headers")
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         new_row_data = [timestamp, audio_filename, transcript_text]
@@ -230,6 +232,11 @@ def write_to_google_sheet(audio_filename: str, transcript_text: str):
 @app.route('/')
 def index():
     """Serves the main HTML page."""
+    app.logger.info("Google Sheets Configuration:")
+    app.logger.info(f"Sheet ID: {GOOGLE_SHEET_ID}")
+    app.logger.info(f"Worksheet Name: {GSHEET_WORKSHEET_NAME}")
+    app.logger.info(f"Service Account Email: {GOOGLE_SERVICE_ACCOUNT_EMAIL}")
+    app.logger.info(f"Credentials File: {GOOGLE_SHEETS_CREDS_FILE}")
     return render_template('index.html')
 
 @app.route('/transcribe', methods=['POST'])
@@ -275,19 +282,50 @@ def handle_transcribe():
         # 2. Post-process
         processed_transcription = post_process_text(raw_transcription)
         app.logger.info(f"Processed transcription for {original_file_name} obtained.")
+        
+        # Save transcription locally
+        transcripts_dir = "transcripts"
+        if not os.path.exists(transcripts_dir):
+            os.makedirs(transcripts_dir)
+        
+        transcript_file = os.path.join(transcripts_dir, f"{os.path.splitext(original_file_name)[0]}_transcript.json")
+        transcript_data = {
+            "filename": original_file_name,
+            "transcription": processed_transcription,
+            "timestamp": datetime.now().isoformat(),
+            "duration": "00:01.908"  # This could be extracted from the audio file
+        }
+        
+        with open(transcript_file, 'w') as f:
+            json.dump(transcript_data, f, indent=2)
+        app.logger.info(f"Transcription saved to {transcript_file}")
 
-        # 3. Write to Google Sheet (optional)
-        if GOOGLE_SHEET_ID: # Only attempt if configured
-            sheet_success = write_to_google_sheet(
-                audio_filename=original_file_name, # Use original filename for Sheets
-                transcript_text=processed_transcription
-            )
-            if not sheet_success:
-                app.logger.warning(f"Failed to write to Google Sheet for {original_file_name}, but transcription was successful.")
-                # Decide if this should be an error to the client or just a server-side warning
-                # For now, we'll still return the transcription.
+        # 3. Write to Google Sheet
+        sheet_status = "not_attempted"
+        if GOOGLE_SHEET_ID:
+            app.logger.info("Attempting to write transcription to Google Sheet...")
+            try:
+                sheet_success = write_to_google_sheet(
+                    audio_filename=original_file_name,
+                    transcript_text=processed_transcription
+                )
+                if sheet_success:
+                    app.logger.info("✓ Successfully wrote to Google Sheet!")
+                    sheet_status = "success"
+                else:
+                    app.logger.error("✗ Failed to write to Google Sheet!")
+                    sheet_status = "failed"
+            except Exception as e:
+                app.logger.error(f"✗ Error writing to Google Sheet: {str(e)}")
+                sheet_status = "error"
 
-        return jsonify({"transcription": processed_transcription, "fileName": original_file_name})
+        return jsonify({
+            "transcription": processed_transcription,
+            "fileName": original_file_name,
+            "sheets_status": sheet_status,
+            "sheet_id": GOOGLE_SHEET_ID,
+            "worksheet_name": GSHEET_WORKSHEET_NAME
+        })
 
     except base64.binascii.Error:
         app.logger.error("Invalid base64 data received.")
@@ -314,4 +352,4 @@ if __name__ == '__main__':
 
     # For development, `flask run` is preferred.
     # The following is for direct script execution:
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=8000)

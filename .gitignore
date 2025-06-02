@@ -19,3 +19,5 @@ transcripts/*
 .vscode/
 .idea/
 *.log
+service-account.json
+credentials.json

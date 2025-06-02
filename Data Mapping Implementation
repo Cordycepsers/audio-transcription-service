@@ -1,0 +1,110 @@
+def map_videoask_to_sheet(contact, form):
+    """
+    Map VideoAsk data to Google Sheet columns.
+    
+    Args:
+        contact (dict): Contact information from webhook
+        form (dict): Form information from webhook
+        
+    Returns:
+        dict: Mapped data ready for Google Sheet
+    """
+    # Initialize mapped data with empty values
+    mapped_data = {
+        'Name': '',
+        'DATE': '',
+        'EMAIL': '',
+        'LOCATION': '',
+        '🔗 Introduce Yourself': '',
+        '📝 Introduce Yourself': '',
+        '🔗 Foundation\'s Influence': '',
+        '📝 Foundation\'s Influence': '',
+        '🔗 Sharing Advice': '',
+        '📝 Sharing Advice': '',
+        '🔗 Purpose & Joy': '',
+        '📝 Purpose & Joy': '',
+        '🔗 Staying Connected': '',
+        '📝 Staying Connected': ''
+    }
+    
+    # Map basic contact information
+    mapped_data['Name'] = contact.get('name', '')
+    
+    # Format date from ISO to readable format
+    created_at = contact.get('created_at', '')
+    if created_at:
+        # Convert ISO timestamp to datetime object
+        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        # Format as YYYY-MM-DD HH:MM:SS
+        mapped_data['DATE'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+    
+    mapped_data['EMAIL'] = contact.get('email', '')
+    mapped_data['LOCATION'] = contact.get('product_name', '')
+    
+    # Get questions from form
+    questions = form.get('questions', [])
+    question_map = {}
+    
+    # Create a mapping of question IDs to their titles/labels
+    for question in questions:
+        question_id = question.get('question_id')
+        label = question.get('label', '')
+        title = question.get('title', '')
+        share_url = question.get('share_url', '')
+        
+        # Determine question type from label or title
+        question_type = None
+        if 'Introduce Yourself' in label or 'Introduce Yourself' in title:
+            question_type = 'intro'
+        elif 'Foundation\'s Influence' in label or 'Foundation\'s Influence' in title:
+            question_type = 'influence'
+        elif 'Sharing Advice' in label or 'Sharing Advice' in title:
+            question_type = 'advice'
+        elif 'Purpose & Joy' in label or 'Purpose & Joy' in title:
+            question_type = 'purpose'
+        elif 'Staying Connected' in label or 'Staying Connected' in title:
+            question_type = 'connected'
+        
+        if question_type and question_id:
+            question_map[question_id] = {
+                'type': question_type,
+                'share_url': share_url
+            }
+    
+    # Process answers
+    answers = contact.get('answers', [])
+    for answer in answers:
+        question_id = answer.get('question_id')
+        if question_id not in question_map:
+            continue
+            
+        question_type = question_map[question_id]['type']
+        share_url = answer.get('share_url', question_map[question_id]['share_url'])
+        
+        # Get answer content based on type
+        answer_content = ''
+        if answer.get('type') == 'video' or answer.get('type') == 'audio':
+            answer_content = answer.get('transcription', '')
+        elif answer.get('type') == 'text':
+            answer_content = answer.get('text', '')
+        elif answer.get('type') == 'poll':
+            answer_content = answer.get('poll_option_content', '')
+        
+        # Map to appropriate columns
+        if question_type == 'intro':
+            mapped_data['🔗 Introduce Yourself'] = share_url
+            mapped_data['📝 Introduce Yourself'] = answer_content
+        elif question_type == 'influence':
+            mapped_data['🔗 Foundation\'s Influence'] = share_url
+            mapped_data['📝 Foundation\'s Influence'] = answer_content
+        elif question_type == 'advice':
+            mapped_data['🔗 Sharing Advice'] = share_url
+            mapped_data['📝 Sharing Advice'] = answer_content
+        elif question_type == 'purpose':
+            mapped_data['🔗 Purpose & Joy'] = share_url
+            mapped_data['📝 Purpose & Joy'] = answer_content
+        elif question_type == 'connected':
+            mapped_data['🔗 Staying Connected'] = share_url
+            mapped_data['📝 Staying Connected'] = answer_content
+    
+    return mapped_data

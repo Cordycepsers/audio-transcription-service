@@ -1,0 +1,29 @@
+def save_local_copy(payload, sheet_data):
+    """
+    Save a local copy of the processed webhook data.
+    
+    Args:
+        payload (dict): Original webhook payload
+        sheet_data (dict): Mapped data for Google Sheet
+    """
+    try:
+        # Create directory if it doesn't exist
+        os.makedirs('webhook_data', exist_ok=True)
+        
+        # Generate filename with timestamp and contact name
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        contact_name = sheet_data['Name'].replace(' ', '_').lower()
+        filename = f"webhook_data/{timestamp}_{contact_name}.json"
+        
+        # Save data
+        with open(filename, 'w') as f:
+            json.dump({
+                'original_payload': payload,
+                'mapped_data': sheet_data,
+                'processed_at': datetime.now().isoformat()
+            }, f, indent=2)
+            
+        app.logger.info(f"Saved local copy to {filename}")
+        
+    except Exception as e:
+        app.logger.error(f"Error saving local copy: {str(e)}")

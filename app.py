@@ -228,6 +228,260 @@ def write_to_google_sheet(audio_filename: str, transcript_text: str):
         app.logger.error(f"Unexpected error writing to Google Sheets: {e}", exc_info=True)
         return False
 
+# --- VideoAsk Webhook Functions ---
+def map_videoask_to_sheet(contact, form):
+    """
+    Map VideoAsk data to Google Sheet columns.
+    
+    Args:
+        contact (dict): Contact information from webhook
+        form (dict): Form information from webhook
+        
+    Returns:
+        dict: Mapped data ready for Google Sheet
+    """
+    # Initialize mapped data with empty values
+    mapped_data = {
+        'Name': '',
+        'DATE': '',
+        'EMAIL': '',
+        'LOCATION': '',
+        '🔗 Introduce Yourself': '',
+        '📝 Introduce Yourself': '',
+        '🔗 Foundation\'s Influence': '',
+        '📝 Foundation\'s Influence': '',
+        '🔗 Sharing Advice': '',
+        '📝 Sharing Advice': '',
+        '🔗 Purpose & Joy': '',
+        '📝 Purpose & Joy': '',
+        '🔗 Staying Connected': '',
+        '📝 Staying Connected': ''
+    }
+    
+    # Map basic contact information
+    mapped_data['Name'] = contact.get('name', '')
+    
+    # Format date from ISO to readable format
+    created_at = contact.get('created_at', '')
+    if created_at:
+        # Convert ISO timestamp to datetime object
+        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        # Format as YYYY-MM-DD HH:MM:SS
+        mapped_data['DATE'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+    
+    mapped_data['EMAIL'] = contact.get('email', '')
+    mapped_data['LOCATION'] = contact.get('product_name', '')
+    
+    # Get questions from form
+    questions = form.get('questions', [])
+    question_map = {}
+    
+    # Create a mapping of question IDs to their titles/labels
+    for question in questions:
+        question_id = question.get('question_id')
+        label = question.get('label', '')
+        title = question.get('title', '')
+        share_url = question.get('share_url', '')
+        
+        # Determine question type from label or title
+        question_type = None
+        if 'Introduce Yourself' in label or 'Introduce Yourself' in title:
+            question_type = 'intro'
+        elif 'Foundation\'s Influence' in label or 'Foundation\'s Influence' in title:
+            question_type = 'influence'
+        elif 'Sharing Advice' in label or 'Sharing Advice' in title:
+            question_type = 'advice'
+        elif 'Purpose & Joy' in label or 'Purpose & Joy' in title:
+            question_type = 'purpose'
+        elif 'Staying Connected' in label or 'Staying Connected' in title:
+            question_type = 'connected'
+        
+        if question_type and question_id:
+            question_map[question_id] = {
+                'type': question_type,
+                'share_url': share_url
+            }
+    
+    # Process answers
+    answers = contact.get('answers', [])
+    for answer in answers:
+        question_id = answer.get('question_id')
+        if question_id not in question_map:
+            continue
+            
+        question_type = question_map[question_id]['type']
+        share_url = answer.get('share_url', question_map[question_id]['share_url'])
+        
+        # Get answer content based on type
+        answer_content = ''
+        if answer.get('type') == 'video' or answer.get('type') == 'audio':
+            answer_content = answer.get('transcription', '')
+        elif answer.get('type') == 'text':
+            answer_content = answer.get('text', '')
+        elif answer.get('type') == 'poll':
+            answer_content = answer.get('poll_option_content', '')
+        
+        # Map to appropriate columns
+        if question_type == 'intro':
+            mapped_data['🔗 Introduce Yourself'] = share_url
+            mapped_data['📝 Introduce Yourself'] = answer_content
+        elif question_type == 'influence':
+            mapped_data['🔗 Foundation\'s Influence'] = share_url
+            mapped_data['📝 Foundation\'s Influence'] = answer_content
+        elif question_type == 'advice':
+            mapped_data['🔗 Sharing Advice'] = share_url
+            mapped_data['📝 Sharing Advice'] = answer_content
+        elif question_type == 'purpose':
+            mapped_data['🔗 Purpose & Joy'] = share_url
+            mapped_data['📝 Purpose & Joy'] = answer_content
+        elif question_type == 'connected':
+            mapped_data['🔗 Staying Connected'] = share_url
+            mapped_data['📝 Staying Connected'] = answer_content
+    
+    return mapped_data
+
+def update_videoask_google_sheet(sheet_data):
+    """
+    Update Google Sheet with the mapped VideoAsk data.
+    
+    Args:
+        sheet_data (dict): Mapped data ready for Google Sheet
+    """
+    try:
+        client = get_gspread_client()
+        if not client:
+            app.logger.error("Failed to get gspread client for VideoAsk webhook")
+            return False
+
+        # Get the VideoAsk sheet configuration
+        videoask_sheet_id = os.getenv('VIDEOASK_GOOGLE_SHEET_ID', GOOGLE_SHEET_ID)
+        videoask_worksheet_name = os.getenv('VIDEOASK_GSHEET_WORKSHEET_NAME', 'VideoAsk Responses')
+        
+        app.logger.info(f"Updating VideoAsk sheet: {videoask_sheet_id}, worksheet: {videoask_worksheet_name}")
+        
+        spreadsheet = client.open_by_key(videoask_sheet_id)
+        
+        try:
+            worksheet = spreadsheet.worksheet(videoask_worksheet_name)
+            app.logger.info(f"Found worksheet: {videoask_worksheet_name}")
+        except gspread.exceptions.WorksheetNotFound:
+            app.logger.info(f"Worksheet '{videoask_worksheet_name}' not found. Creating it...")
+            worksheet = spreadsheet.add_worksheet(title=videoask_worksheet_name, rows="1000", cols="27")
+            # Add headers for VideoAsk data
+            headers = [
+                "Name", "HANNAH REV.", "DRE REV.", "DATE", "EMAIL", "LOCATION",
+                "🔗 Introduce Yourself", "📝 Introduce Yourself",
+                "🔗 Foundation's Influence", "📝 Foundation's Influence",
+                "🔗 Sharing Advice", "📝 Sharing Advice",
+                "🔗 Purpose & Joy", "📝 Purpose & Joy",
+                "🔗 Staying Connected", "📝 Staying Connected",
+                "YEARS AT FOUNDATION", "FOUNDATION TEAMS (AI)", "FOUNDATION TEAMS (MANUAL)",
+                "VIDEO QUALITY?", "AUDIO QUALITY?", "POTENTIAL PATHWAYS USAGE",
+                "CONFIRMED PATHWAYS USAGE", "WTYSL NOTES", "UNCOMMON NOTES",
+                "25th Anniversary Storylines", "PROGRAMMATIC TAGS"
+            ]
+            worksheet.append_row(headers)
+            app.logger.info(f"Created worksheet '{videoask_worksheet_name}' with headers")
+
+        # Prepare row data in the correct column order
+        row_data = [
+            sheet_data['Name'],                     # Column A
+            '',                                     # Column B (HANNAH REV.)
+            '',                                     # Column C (DRE REV.)
+            sheet_data['DATE'],                     # Column D
+            sheet_data['EMAIL'],                    # Column E
+            sheet_data['LOCATION'],                 # Column F
+            sheet_data['🔗 Introduce Yourself'],    # Column G
+            sheet_data['📝 Introduce Yourself'],    # Column H
+            sheet_data['🔗 Foundation\'s Influence'], # Column I
+            sheet_data['📝 Foundation\'s Influence'], # Column J
+            sheet_data['🔗 Sharing Advice'],        # Column K
+            sheet_data['📝 Sharing Advice'],        # Column L
+            sheet_data['🔗 Purpose & Joy'],         # Column M
+            sheet_data['📝 Purpose & Joy'],         # Column N
+            sheet_data['🔗 Staying Connected'],     # Column O
+            sheet_data['📝 Staying Connected'],     # Column P
+            '',                                     # Column Q (YEARS AT FOUNDATION)
+            '',                                     # Column R (FOUNDATION TEAMS (AI))
+            '',                                     # Column S (FOUNDATION TEAMS (MANUAL))
+            '',                                     # Column T (VIDEO QUALITY?)
+            '',                                     # Column U (AUDIO QUALITY?)
+            '',                                     # Column V (POTENTIAL PATHWAYS USAGE)
+            '',                                     # Column W (CONFIRMED PATHWAYS USAGE)
+            '',                                     # Column X (WTYSL NOTES)
+            '',                                     # Column Y (UNCOMMON NOTES)
+            '',                                     # Column Z (25th Anniversary Storylines)
+            ''                                      # Column AA (PROGRAMMATIC TAGS)
+        ]
+        
+        # Append the new row
+        worksheet.append_row(row_data)
+        
+        app.logger.info(f"Successfully updated VideoAsk Google Sheet with data for {sheet_data['Name']}")
+        return True
+        
+    except Exception as e:
+        app.logger.error(f"Error updating VideoAsk Google Sheet: {str(e)}")
+        return False
+
+def save_local_copy(payload, sheet_data):
+    """
+    Save a local copy of the processed webhook data.
+    
+    Args:
+        payload (dict): Original webhook payload
+        sheet_data (dict): Mapped data for Google Sheet
+    """
+    try:
+        # Create directory if it doesn't exist
+        os.makedirs('webhook_data', exist_ok=True)
+        
+        # Generate filename with timestamp and contact name
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        contact_name = sheet_data['Name'].replace(' ', '_').lower()
+        filename = f"webhook_data/{timestamp}_{contact_name}.json"
+        
+        # Save data
+        with open(filename, 'w') as f:
+            json.dump({
+                'original_payload': payload,
+                'mapped_data': sheet_data,
+                'processed_at': datetime.now().isoformat()
+            }, f, indent=2)
+            
+        app.logger.info(f"Saved local copy to {filename}")
+        
+    except Exception as e:
+        app.logger.error(f"Error saving local copy: {str(e)}")
+
+def process_videoask_payload(payload):
+    """
+    Process the VideoAsk webhook payload and update Google Sheet.
+    
+    Args:
+        payload (dict): The webhook payload from VideoAsk
+    """
+    # Extract event type
+    event_type = payload.get('event_type')
+    
+    # Only process form_response events
+    if event_type != 'form_response':
+        app.logger.info(f"Ignoring non-form_response event: {event_type}")
+        return
+    
+    # Extract contact information
+    contact = payload.get('contact', {})
+    form = payload.get('form', {})
+    
+    # Map data according to our mapping logic
+    sheet_data = map_videoask_to_sheet(contact, form)
+    
+    # Update Google Sheet with the mapped data
+    update_videoask_google_sheet(sheet_data)
+    
+    # Optionally save a local copy of the processed data
+    save_local_copy(payload, sheet_data)
+
 # --- Flask Routes ---
 @app.route('/')
 def index():
@@ -341,6 +595,150 @@ def handle_transcribe():
                 app.logger.info(f"Temporary file {temp_file_path} deleted.")
             except Exception as e_remove:
                 app.logger.error(f"Error deleting temporary file {temp_file_path}: {e_remove}")
+
+@app.route('/webhook/videoask', methods=['POST'])
+def videoask_webhook():
+    """
+    Endpoint to receive VideoAsk webhook payloads and process them.
+    """
+    # Get JSON payload
+    payload = request.json
+    
+    if not payload:
+        app.logger.warning("VideoAsk webhook: No payload received")
+        return jsonify({'status': 'error', 'message': 'No payload received'}), 400
+    
+    try:
+        app.logger.info(f"Received VideoAsk webhook: {payload.get('event_type', 'unknown')}")
+        
+        # Process the webhook payload
+        process_videoask_payload(payload)
+        
+        app.logger.info("VideoAsk webhook processed successfully")
+        return jsonify({'status': 'success'}), 200
+        
+    except Exception as e:
+        # Log the error
+        app.logger.error(f"Error processing VideoAsk webhook: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/webhook/test', methods=['POST'])
+def test_webhook():
+    """
+    Test endpoint for webhook functionality with sample data.
+    """
+    sample_payload = {
+        "event_type": "form_response",
+        "contact": {
+            "name": "John Doe",
+            "email": "john.doe@example.com",
+            "created_at": "2025-06-02T10:30:00Z",
+            "product_name": "Test Location",
+            "answers": [
+                {
+                    "question_id": "intro_q1",
+                    "type": "video",
+                    "transcription": "Hello, my name is John and I'm excited to share my story.",
+                    "share_url": "https://example.com/share/intro"
+                },
+                {
+                    "question_id": "influence_q1",
+                    "type": "text",
+                    "text": "The foundation has greatly influenced my career path.",
+                    "share_url": "https://example.com/share/influence"
+                }
+            ]
+        },
+        "form": {
+            "questions": [
+                {
+                    "question_id": "intro_q1",
+                    "label": "Introduce Yourself",
+                    "title": "Tell us about yourself",
+                    "share_url": "https://example.com/share/intro"
+                },
+                {
+                    "question_id": "influence_q1",
+                    "label": "Foundation's Influence",
+                    "title": "How has the foundation influenced you?",
+                    "share_url": "https://example.com/share/influence"
+                }
+            ]
+        }
+    }
+    
+    try:
+        app.logger.info("Processing test webhook payload")
+        
+        # Process the test payload
+        process_videoask_payload(sample_payload)
+        
+        # Also return the mapped data for inspection
+        contact = sample_payload.get('contact', {})
+        form = sample_payload.get('form', {})
+        mapped_data = map_videoask_to_sheet(contact, form)
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Test payload processed successfully',
+            'mapped_data': mapped_data
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error processing test webhook: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/webhook/validate', methods=['GET'])
+def validate_webhook_config():
+    """
+    Validate webhook configuration and Google Sheets access.
+    """
+    validation_results = {
+        'google_sheets_client': False,
+        'videoask_sheet_access': False,
+        'webhook_data_directory': False,
+        'environment_variables': {}
+    }
+    
+    # Test Google Sheets client
+    try:
+        client = get_gspread_client()
+        if client:
+            validation_results['google_sheets_client'] = True
+            
+            # Test VideoAsk sheet access
+            videoask_sheet_id = os.getenv('VIDEOASK_GOOGLE_SHEET_ID', GOOGLE_SHEET_ID)
+            if videoask_sheet_id:
+                try:
+                    spreadsheet = client.open_by_key(videoask_sheet_id)
+                    validation_results['videoask_sheet_access'] = True
+                except Exception as e:
+                    validation_results['videoask_sheet_error'] = str(e)
+    except Exception as e:
+        validation_results['google_sheets_error'] = str(e)
+    
+    # Check webhook data directory
+    try:
+        os.makedirs('webhook_data', exist_ok=True)
+        validation_results['webhook_data_directory'] = os.path.exists('webhook_data')
+    except Exception as e:
+        validation_results['webhook_data_error'] = str(e)
+    
+    # Check environment variables
+    env_vars = [
+        'GOOGLE_SHEET_ID',
+        'VIDEOASK_GOOGLE_SHEET_ID',
+        'GSHEET_WORKSHEET_NAME', 
+        'VIDEOASK_GSHEET_WORKSHEET_NAME'
+    ]
+    
+    for var in env_vars:
+        validation_results['environment_variables'][var] = os.getenv(var) is not None
+    
+    return jsonify(validation_results), 200
 
 # --- Main Execution (for local development) ---
 if __name__ == '__main__':

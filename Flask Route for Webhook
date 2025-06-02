@@ -1,0 +1,22 @@
+@app.route('/webhook/videoask', methods=['POST'])
+def videoask_webhook():
+    """
+    Endpoint to receive VideoAsk webhook payloads and process them.
+    """
+    # Verify webhook signature if applicable
+    # signature = request.headers.get('X-Videoask-Signature', '')
+    
+    # Get JSON payload
+    payload = request.json
+    
+    if not payload:
+        return jsonify({'status': 'error', 'message': 'No payload received'}), 400
+    
+    try:
+        # Process the webhook payload
+        process_videoask_payload(payload)
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        # Log the error
+        app.logger.error(f"Error processing webhook: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500

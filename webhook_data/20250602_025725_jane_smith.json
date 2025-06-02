@@ -1,0 +1,46 @@
+{
+  "original_payload": {
+    "event_type": "form_response",
+    "contact": {
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "created_at": "2025-06-02T14:30:00Z",
+      "product_name": "Production Location",
+      "answers": [
+        {
+          "question_id": "intro_q1",
+          "type": "video",
+          "transcription": "Hi, I am Jane and I love working with the foundation.",
+          "share_url": "https://example.com/share/jane_intro"
+        }
+      ]
+    },
+    "form": {
+      "questions": [
+        {
+          "question_id": "intro_q1",
+          "label": "Introduce Yourself",
+          "title": "Tell us about yourself",
+          "share_url": "https://example.com/share/jane_intro"
+        }
+      ]
+    }
+  },
+  "mapped_data": {
+    "Name": "Jane Smith",
+    "DATE": "2025-06-02 14:30:00",
+    "EMAIL": "jane@example.com",
+    "LOCATION": "Production Location",
+    "\ud83d\udd17 Introduce Yourself": "https://example.com/share/jane_intro",
+    "\ud83d\udcdd Introduce Yourself": "Hi, I am Jane and I love working with the foundation.",
+    "\ud83d\udd17 Foundation's Influence": "",
+    "\ud83d\udcdd Foundation's Influence": "",
+    "\ud83d\udd17 Sharing Advice": "",
+    "\ud83d\udcdd Sharing Advice": "",
+    "\ud83d\udd17 Purpose & Joy": "",
+    "\ud83d\udcdd Purpose & Joy": "",
+    "\ud83d\udd17 Staying Connected": "",
+    "\ud83d\udcdd Staying Connected": ""
+  },
+  "processed_at": "2025-06-02T02:57:25.203903"
+}

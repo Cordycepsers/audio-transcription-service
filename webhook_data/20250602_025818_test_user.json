@@ -1,0 +1,70 @@
+{
+  "original_payload": {
+    "event_type": "form_response",
+    "contact": {
+      "name": "Test User",
+      "email": "test.user.1748833098@example.com",
+      "created_at": "2025-06-02T02:58:18.727008Z",
+      "product_name": "Test Integration",
+      "answers": [
+        {
+          "question_id": "intro_q1",
+          "type": "video",
+          "transcription": "This is a test transcription from the integration test.",
+          "share_url": "https://example.com/share/test_intro"
+        },
+        {
+          "question_id": "influence_q1",
+          "type": "text",
+          "text": "Testing the influence question response.",
+          "share_url": "https://example.com/share/test_influence"
+        },
+        {
+          "question_id": "advice_q1",
+          "type": "video",
+          "transcription": "This is advice from our test user.",
+          "share_url": "https://example.com/share/test_advice"
+        }
+      ]
+    },
+    "form": {
+      "questions": [
+        {
+          "question_id": "intro_q1",
+          "label": "Introduce Yourself",
+          "title": "Tell us about yourself",
+          "share_url": "https://example.com/share/test_intro"
+        },
+        {
+          "question_id": "influence_q1",
+          "label": "Foundation's Influence",
+          "title": "How has the foundation influenced you?",
+          "share_url": "https://example.com/share/test_influence"
+        },
+        {
+          "question_id": "advice_q1",
+          "label": "Sharing Advice",
+          "title": "What advice would you share?",
+          "share_url": "https://example.com/share/test_advice"
+        }
+      ]
+    }
+  },
+  "mapped_data": {
+    "Name": "Test User",
+    "DATE": "2025-06-02 02:58:18",
+    "EMAIL": "test.user.1748833098@example.com",
+    "LOCATION": "Test Integration",
+    "\ud83d\udd17 Introduce Yourself": "https://example.com/share/test_intro",
+    "\ud83d\udcdd Introduce Yourself": "This is a test transcription from the integration test.",
+    "\ud83d\udd17 Foundation's Influence": "https://example.com/share/test_influence",
+    "\ud83d\udcdd Foundation's Influence": "Testing the influence question response.",
+    "\ud83d\udd17 Sharing Advice": "https://example.com/share/test_advice",
+    "\ud83d\udcdd Sharing Advice": "This is advice from our test user.",
+    "\ud83d\udd17 Purpose & Joy": "",
+    "\ud83d\udcdd Purpose & Joy": "",
+    "\ud83d\udd17 Staying Connected": "",
+    "\ud83d\udcdd Staying Connected": ""
+  },
+  "processed_at": "2025-06-02T02:58:18.773023"
+}

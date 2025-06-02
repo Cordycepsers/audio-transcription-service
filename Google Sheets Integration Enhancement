@@ -1,0 +1,66 @@
+def update_google_sheet(sheet_data):
+    """
+    Update Google Sheet with the mapped data.
+    
+    Args:
+        sheet_data (dict): Mapped data ready for Google Sheet
+    """
+    try:
+        # Load credentials
+        creds_file = os.getenv('GOOGLE_SHEETS_CREDS_FILE', 'service-account.json')
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        credentials = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
+        
+        # Authorize with Google
+        client = gspread.authorize(credentials)
+        
+        # Open the spreadsheet
+        sheet_id = os.getenv('GOOGLE_SHEET_ID')
+        worksheet_name = os.getenv('GSHEET_WORKSHEET_NAME', 'TRANSCRIPT FINAL')
+        
+        spreadsheet = client.open_by_key(sheet_id)
+        worksheet = spreadsheet.worksheet(worksheet_name)
+        
+        # Get all values to find the next empty row
+        all_values = worksheet.get_all_values()
+        next_row = len(all_values) + 1
+        
+        # Prepare row data in the correct column order
+        row_data = [
+            sheet_data['Name'],                     # Column A
+            '',                                     # Column B (HANNAH REV.)
+            '',                                     # Column C (DRE REV.)
+            sheet_data['DATE'],                     # Column D
+            sheet_data['EMAIL'],                    # Column E
+            sheet_data['LOCATION'],                 # Column F
+            sheet_data['🔗 Introduce Yourself'],    # Column G
+            sheet_data['📝 Introduce Yourself'],    # Column H
+            sheet_data['🔗 Foundation\'s Influence'], # Column I
+            sheet_data['📝 Foundation\'s Influence'], # Column J
+            sheet_data['🔗 Sharing Advice'],        # Column K
+            sheet_data['📝 Sharing Advice'],        # Column L
+            sheet_data['🔗 Purpose & Joy'],         # Column M
+            sheet_data['📝 Purpose & Joy'],         # Column N
+            sheet_data['🔗 Staying Connected'],     # Column O
+            sheet_data['📝 Staying Connected'],     # Column P
+            '',                                     # Column Q (YEARS AT FOUNDATION)
+            '',                                     # Column R (FOUNDATION TEAMS (AI))
+            '',                                     # Column S (FOUNDATION TEAMS (MANUAL))
+            '',                                     # Column T (VIDEO QUALITY?)
+            '',                                     # Column U (AUDIO QUALITY?)
+            '',                                     # Column V (POTENTIAL PATHWAYS USAGE)
+            '',                                     # Column W (CONFIRMED PATHWAYS USAGE)
+            '',                                     # Column X (WTYSL NOTES)
+            '',                                     # Column Y (UNCOMMON NOTES)
+            '',                                     # Column Z (25th Anniversary Storylines)
+            ''                                      # Column AA (PROGRAMMATIC TAGS)
+        ]
+        
+        # Update the sheet
+        worksheet.insert_row(row_data, next_row)
+        
+        app.logger.info(f"Successfully updated Google Sheet with data for {sheet_data['Name']}")
+        
+    except Exception as e:
+        app.logger.error(f"Error updating Google Sheet: {str(e)}")
+        raise

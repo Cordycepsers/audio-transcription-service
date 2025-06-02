@@ -1,0 +1,13 @@
+runtime: python39
+instance_class: F2
+env_variables:
+  GOOGLE_SHEET_ID: "1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU"
+  GSHEET_WORKSHEET_NAME: "TRANSCRIPT FINAL"
+  VIDEOASK_GOOGLE_SHEET_ID: "1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU"
+  VIDEOASK_GSHEET_WORKSHEET_NAME: "TRANSCRIPT FINAL"
+
+entrypoint: gunicorn -b :$PORT app:app
+
+handlers:
+- url: /.*
+  script: auto

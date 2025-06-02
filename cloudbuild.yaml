@@ -1,0 +1,32 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/flask-videoask-webhook:$COMMIT_SHA', '.']
+  
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/flask-videoask-webhook:$COMMIT_SHA']
+  
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'flask-videoask-webhook'
+      - '--image=gcr.io/$PROJECT_ID/flask-videoask-webhook:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=512Mi'
+      - '--cpu=1'
+      - '--set-env-vars=GOOGLE_SHEET_ID=${_GOOGLE_SHEET_ID},GSHEET_WORKSHEET_NAME=${_GSHEET_WORKSHEET_NAME},VIDEOASK_GOOGLE_SHEET_ID=${_VIDEOASK_GOOGLE_SHEET_ID},VIDEOASK_GSHEET_WORKSHEET_NAME=${_VIDEOASK_GSHEET_WORKSHEET_NAME}'
+
+images:
+  - 'gcr.io/$PROJECT_ID/flask-videoask-webhook:$COMMIT_SHA'
+
+substitutions:
+  _GOOGLE_SHEET_ID: '1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU'
+  _GSHEET_WORKSHEET_NAME: 'TRANSCRIPT FINAL'
+  _VIDEOASK_GOOGLE_SHEET_ID: '1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU'
+  _VIDEOASK_GSHEET_WORKSHEET_NAME: 'TRANSCRIPT FINAL'

@@ -1,0 +1,36 @@
+{
+  "original_payload": {
+    "event_type": "form_response",
+    "contact": {
+      "email": "test@example.com",
+      "first_name": "John",
+      "last_name": "Doe"
+    },
+    "form": {
+      "questions": [
+        {
+          "question_id": "q1",
+          "label": "Name",
+          "title": "What is your name?"
+        }
+      ]
+    }
+  },
+  "mapped_data": {
+    "Name": "",
+    "DATE": "",
+    "EMAIL": "test@example.com",
+    "LOCATION": "",
+    "\ud83d\udd17 Introduce Yourself": "",
+    "\ud83d\udcdd Introduce Yourself": "",
+    "\ud83d\udd17 Foundation's Influence": "",
+    "\ud83d\udcdd Foundation's Influence": "",
+    "\ud83d\udd17 Sharing Advice": "",
+    "\ud83d\udcdd Sharing Advice": "",
+    "\ud83d\udd17 Purpose & Joy": "",
+    "\ud83d\udcdd Purpose & Joy": "",
+    "\ud83d\udd17 Staying Connected": "",
+    "\ud83d\udcdd Staying Connected": ""
+  },
+  "processed_at": "2025-06-02T03:21:58.623621"
+}

@@ -460,27 +460,64 @@ def process_videoask_payload(payload):
     
     Args:
         payload (dict): The webhook payload from VideoAsk
+        
+    Returns:
+        dict: Processing results with statistics
     """
+    # Initialize processing statistics
+    processing_stats = {
+        'processed': 0,
+        'skipped': 0,
+        'errors': 0,
+        'email': '',
+        'details': []
+    }
+    
     # Extract event type
     event_type = payload.get('event_type')
     
     # Only process form_response events
     if event_type != 'form_response':
         app.logger.info(f"Ignoring non-form_response event: {event_type}")
-        return
+        processing_stats['skipped'] = 1
+        processing_stats['details'].append(f"Skipped non-form_response event: {event_type}")
+        return processing_stats
     
     # Extract contact information
     contact = payload.get('contact', {})
     form = payload.get('form', {})
     
-    # Map data according to our mapping logic
-    sheet_data = map_videoask_to_sheet(contact, form)
+    # Get email for tracking
+    processing_stats['email'] = contact.get('email', 'unknown@email.com')
     
-    # Update Google Sheet with the mapped data
-    update_videoask_google_sheet(sheet_data)
+    try:
+        # Map data according to our mapping logic
+        sheet_data = map_videoask_to_sheet(contact, form)
+        
+        # Update Google Sheet with the mapped data
+        sheet_success = update_videoask_google_sheet(sheet_data)
+        
+        if sheet_success:
+            processing_stats['processed'] += 1
+            processing_stats['details'].append("Successfully updated Google Sheet")
+        else:
+            processing_stats['errors'] += 1
+            processing_stats['details'].append("Failed to update Google Sheet")
+        
+        # Save a local copy of the processed data
+        try:
+            save_local_copy(payload, sheet_data)
+            processing_stats['details'].append("Local backup saved successfully")
+        except Exception as backup_error:
+            processing_stats['errors'] += 1
+            processing_stats['details'].append(f"Local backup failed: {str(backup_error)}")
+            
+    except Exception as e:
+        processing_stats['errors'] += 1
+        processing_stats['details'].append(f"Processing error: {str(e)}")
+        app.logger.error(f"Error in process_videoask_payload: {str(e)}")
     
-    # Optionally save a local copy of the processed data
-    save_local_copy(payload, sheet_data)
+    return processing_stats
 
 # --- Flask Routes ---
 @app.route('/')
@@ -600,27 +637,44 @@ def handle_transcribe():
 def videoask_webhook():
     """
     Endpoint to receive VideoAsk webhook payloads and process them.
+    Returns delivery details with processing statistics.
     """
     # Get JSON payload
     payload = request.json
     
     if not payload:
         app.logger.warning("VideoAsk webhook: No payload received")
-        return jsonify({'status': 'error', 'message': 'No payload received'}), 400
+        error_response = "Webhook received and processed: No payload received - Processed=0, Skipped=0, Errors=1"
+        return error_response, 400, {'Content-Type': 'text/html; charset=utf-8'}
     
     try:
         app.logger.info(f"Received VideoAsk webhook: {payload.get('event_type', 'unknown')}")
         
-        # Process the webhook payload
-        process_videoask_payload(payload)
+        # Process the webhook payload and get processing statistics
+        processing_stats = process_videoask_payload(payload)
         
-        app.logger.info("VideoAsk webhook processed successfully")
-        return jsonify({'status': 'success'}), 200
+        # Create delivery details response
+        email = processing_stats.get('email', 'unknown@email.com')
+        processed = processing_stats.get('processed', 0)
+        skipped = processing_stats.get('skipped', 0)
+        errors = processing_stats.get('errors', 0)
+        
+        delivery_response = f"Webhook received and processed: Webhook processing summary for email {email}: Processed={processed}, Skipped={skipped}, Errors={errors}"
+        
+        app.logger.info(f"VideoAsk webhook processed - {delivery_response}")
+        
+        # Return response with proper headers matching the example
+        return delivery_response, 200, {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Server': 'Digital Ocean',
+            'Content-Length': str(len(delivery_response))
+        }
         
     except Exception as e:
         # Log the error
         app.logger.error(f"Error processing VideoAsk webhook: {str(e)}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        error_response = f"Webhook received and processed: Processing error - Processed=0, Skipped=0, Errors=1"
+        return error_response, 500, {'Content-Type': 'text/html; charset=utf-8'}
 
 @app.route('/webhook/test', methods=['POST'])
 def test_webhook():

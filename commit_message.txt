@@ -1,0 +1,20 @@
+feat: Integrate VideoAsk webhook & prep for Cloud Run
+
+Integrates VideoAsk webhook functionality into the Flask audio
+transcription application and prepares it for Google Cloud Run.
+
+Key changes:
+- Added VideoAsk webhook routes: /webhook/videoask, /test, /validate.
+- Implemented VideoAsk to Google Sheets data mapping and updates.
+- Added local backup for webhook payloads to webhook_data/.
+- Created Dockerfile, cloudbuild.yaml, .dockerignore for Cloud Run.
+- Updated .env with VideoAsk GSheet ID and service account email.
+- Added gunicorn to requirements.txt.
+- Created various test scripts for GSheets and webhooks.
+
+Files created/modified include:
+app.py, .env, service-account.json, requirements.txt, Dockerfile,
+.dockerignore, cloudbuild.yaml, quick_sheets_test.py,
+simple_sheets_test.py, test_sheets.py,
+test_google_sheets_credentials.py, CLOUD_DEPLOYMENT.MD, app.yaml,
+and files in webhook_data/.

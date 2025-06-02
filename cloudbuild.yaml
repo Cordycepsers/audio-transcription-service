@@ -1,37 +1,66 @@
 steps:
-  # Build the container image
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/flask-videoask-webhook:$COMMIT_SHA', '.']
-  
-  # Push the container image to Container Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/flask-videoask-webhook:$COMMIT_SHA']
-  
-  # Deploy container image to Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+  - name: gcr.io/k8s-skaffold/pack
     args:
-      - 'run'
-      - 'deploy'
-      - 'flask-videoask-webhook'
-      - '--image=gcr.io/$PROJECT_ID/flask-videoask-webhook:$COMMIT_SHA'
-      - '--region=us-central1'
+      - build
+      - >-
+        $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+      - '--builder=gcr.io/buildpacks/builder:latest'
+      - '--network=cloudbuild'
+      - '--path=.'
+    id: Buildpack
+    entrypoint: pack
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - >-
+        $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+    id: Push
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    args:
+      - run
+      - services
+      - update
+      - $_SERVICE_NAME
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--memory=512Mi'
-      - '--cpu=1'
-      - '--set-env-vars=GOOGLE_SHEET_ID=${_GOOGLE_SHEET_ID},GSHEET_WORKSHEET_NAME=${_GSHEET_WORKSHEET_NAME},VIDEOASK_GOOGLE_SHEET_ID=${_VIDEOASK_GOOGLE_SHEET_ID},VIDEOASK_GSHEET_WORKSHEET_NAME=${_VIDEOASK_GSHEET_WORKSHEET_NAME},GOOGLE_SHEETS_CREDS_FILE=${_GOOGLE_SHEETS_CREDS_FILE},GOOGLE_SERVICE_ACCOUNT_EMAIL=${_GOOGLE_SERVICE_ACCOUNT_EMAIL},WHISPER_MODEL=${_WHISPER_MODEL},COMPUTE_TYPE=${_COMPUTE_TYPE},DEVICE=${_DEVICE}\'
-
+      - >-
+        --image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+      - >-
+        --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID
+      - '--region=$_DEPLOY_REGION'
+      - '--quiet'
+      - >-
+        --set-env-vars=GOOGLE_SHEET_ID=1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU,GSHEET_WORKSHEET_NAME=TRANSCRIPT\ FINAL,VIDEOASK_GOOGLE_SHEET_ID=1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU,VIDEOASK_GSHEET_WORKSHEET_NAME=TRANSCRIPT\ FINAL,GOOGLE_SHEETS_CREDS_FILE=service-account.json,GOOGLE_SERVICE_ACCOUNT_EMAIL=1053893186121-compute@developer.gserviceaccount.com,WHISPER_MODEL=base.en,COMPUTE_TYPE=int8,DEVICE=cpu,GOOGLE_SHEETS_SCOPES=https://www.googleapis.com/auth/spreadsheets
+    id: Deploy
+    entrypoint: gcloud
 images:
-  - 'gcr.io/$PROJECT_ID/flask-videoask-webhook:$COMMIT_SHA'
-
+  - >-
+    $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+options:
+  substitutionOption: ALLOW_LOOSE
+  logging: CLOUD_LOGGING_ONLY
 substitutions:
-  _GOOGLE_SHEET_ID: '1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU'
-  _GSHEET_WORKSHEET_NAME: 'TRANSCRIPT FINAL'
-  _VIDEOASK_GOOGLE_SHEET_ID: '1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU'
-  _VIDEOASK_GSHEET_WORKSHEET_NAME: 'TRANSCRIPT FINAL'
-  _GOOGLE_SHEETS_CREDS_FILE: 'service-account.json' # Assuming it's in the app root
-  _GOOGLE_SERVICE_ACCOUNT_EMAIL: '1053893186121-compute@developer.gserviceaccount.com'
-  _WHISPER_MODEL: 'base.en'
-  _COMPUTE_TYPE: 'int8'
-  _DEVICE: 'cpu'
+  _AR_REPOSITORY: cloud-run-source-deploy
+  _AR_PROJECT_ID: starry-computer-457800-b8
+  _PLATFORM: managed
+  _TRIGGER_ID: d7d6cdb7-0bd4-4681-a2ad-77fd8bc78646
+  _SERVICE_NAME: transcript
+  REPO_NAME: codespaces-flask-working-
+  _DEPLOY_REGION: us-central1
+  _AR_HOSTNAME: us-central1-docker.pkg.dev
+tags:
+  - gcp-cloud-build-deploy-cloud-run
+  - gcp-cloud-build-deploy-cloud-run-managed
+  - transcript
+
+# IMPORTANT SERVICE ACCOUNT HANDLING NOTES:
+# This deployment expects service-account.json to be present in the container.
+# Since service-account.json is not in Git (added to .gitignore), here are options:
+# 1. Place service-account.json in the root directory before deploying manually
+# 2. Add service-account.json to the container during the build process
+# 3. Use Google Secret Manager to store credentials and mount them at runtime
+# 4. Use workload identity to authenticate with Google services without service account key
+# 
+# For production, options 3 or 4 are recommended for security best practices.
+
+

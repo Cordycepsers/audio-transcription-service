@@ -1,12 +1,13 @@
 # Flask Audio Transcription Service with VideoAsk Integration
 
-This Flask application provides an audio transcription service with Google Sheets integration and VideoAsk webhook support. It can process both MP3 and MP4 files, transcribing their audio content using the Whisper model and storing the results in both local JSON files and a Google Sheet. Additionally, it processes VideoAsk webhook payloads for comprehensive form response management.
+This Flask application provides an audio transcription service with Apps Script, Google Sheets integration and VideoAsk webhook support. It can process both MP3 and MP4 files, transcribing their audio content using the Whisper model and storing the results in both local JSON files and a Google Sheet. Additionally, it processes VideoAsk webhook payloads for comprehensive form response management.
 
 ## Features
 
 ### Audio Transcription
 - Audio/Video transcription using Whisper model
 - Google Sheets integration for transcript storage
+- Google Apps Script tool automatically processes transcript data in a Google Sheets
 - Bulk file processing support
 - Web interface for single file uploads
 - Support for MP3 and MP4 files
@@ -15,6 +16,7 @@ This Flask application provides an audio transcription service with Google Sheet
 ### VideoAsk Integration
 - Webhook endpoint for VideoAsk form responses
 - Automatic data mapping to Google Sheets format
+- Apps script analyzes transcripts and populates columns with structured data for further analysis.
 - Local backup of all webhook payloads
 - Test endpoints for validation and debugging
 - Comprehensive error handling and logging

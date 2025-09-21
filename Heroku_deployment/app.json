@@ -1,0 +1,58 @@
+{
+  "name": "Audio Transcription Service",
+  "description": "Flask-based audio transcription service with Google Sheets integration",
+  "repository": "https://github.com/Cordycepsers/transcript-WORKING-WEBHOOK",
+  "logo": "https://cdn.jsdelivr.net/npm/simple-icons@v3/icons/heroku.svg",
+  "keywords": ["flask", "audio", "transcription", "whisper", "google-sheets"],
+  "image": "heroku/python",
+  "stack": "heroku-22",
+  "buildpacks": [
+    {
+      "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
+    },
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "addons": [
+    {
+      "plan": "papertrail:choklad",
+      "as": "PAPERTRAIL"
+    }
+  ],
+  "env": {
+    "FLASK_ENV": {
+      "description": "Flask environment (production/development)",
+      "value": "production"
+    },
+    "GOOGLE_SHEET_ID": {
+      "description": "Google Sheets ID for transcript storage",
+      "required": true
+    },
+    "GOOGLE_WORKSHEET_NAME": {
+      "description": "Google Sheets worksheet name",
+      "value": "TRANSCRIPT FINAL"
+    },
+    "SERVICE_ACCOUNT_EMAIL": {
+      "description": "Google Service Account email",
+      "required": true
+    },
+    "SENTRY_DSN": {
+      "description": "Sentry DSN for error monitoring (optional)",
+      "required": false
+    },
+    "MAX_CONTENT_LENGTH": {
+      "description": "Maximum file upload size in bytes",
+      "value": "104857600"
+    }
+  },
+  "scripts": {
+    "postdeploy": "python download_nltk_data.py"
+  }
+}

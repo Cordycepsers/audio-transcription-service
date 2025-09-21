@@ -44,7 +44,7 @@ gcloud run deploy flask-videoask-webhook \
   --allow-unauthenticated \
   --memory=512Mi \
   --cpu=1 \
-  --set-env-vars="GOOGLE_SHEET_ID=1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU,GSHEET_WORKSHEET_NAME=TRANSCRIPT FINAL,VIDEOASK_GOOGLE_SHEET_ID=1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU,VIDEOASK_GSHEET_WORKSHEET_NAME=TRANSCRIPT FINAL"
+  --set-env-vars="GOOGLE_SHEET_ID=xxxxxxxxxxxxxKRU,GSHEET_WORKSHEET_NAME=TRANSCRIPT FINAL,VIDEOASK_GOOGLE_SHEET_ID=xxxxxxxxxxxxKRU,VIDEOASK_GSHEET_WORKSHEET_NAME=TRANSCRIPT FINAL"
 
 # 6. Mount the service account secret
 echo "Mounting service account secret..."

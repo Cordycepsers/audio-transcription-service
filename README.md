@@ -16,10 +16,14 @@ This Flask application provides an audio transcription service with Apps Script,
 ### VideoAsk Integration
 - Webhook endpoint for VideoAsk form responses
 - Automatic data mapping to Google Sheets format
-- Apps script analyzes transcripts and populates columns with structured data for further analysis.
+- Apps script analyzes transcripts and populates columns with structured data for further analysis
 - Local backup of all webhook payloads
 - Test endpoints for validation and debugging
 - Comprehensive error handling and logging
+- Heroku Scheduler for Automated Health Checks
+🌐 Web interface with drag-and-drop file upload
+📱 RESTful API endpoints
+🔍 Health monitoring and metrics
 
 ## Prerequisites
 

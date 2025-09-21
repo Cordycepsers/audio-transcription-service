@@ -36,7 +36,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 GOOGLE_SHEET_ID = os.getenv('GOOGLE_SHEET_ID')  # Get the sheet ID from environment variable
 GSHEET_WORKSHEET_NAME = os.getenv('GSHEET_WORKSHEET_NAME', 'TRANSCRIPT FINAL')
 GOOGLE_SHEETS_CREDS_FILE = os.path.join(BASE_DIR, 'service-account.json')
-GOOGLE_SERVICE_ACCOUNT_EMAIL = os.getenv('GOOGLE_SERVICE_ACCOUNT_EMAIL', 'transcript@transcript-460922.iam.gserviceaccount.com')
+GOOGLE_SERVICE_ACCOUNT_EMAIL = os.getenv('GOOGLE_SERVICE_ACCOUNT_EMAIL', 'someservice@transcript-460922.iam.gserviceaccount.com')
 
 app.logger.info(f"Base directory: {BASE_DIR}")
 app.logger.info(f"Service account file path: {GOOGLE_SHEETS_CREDS_FILE}")

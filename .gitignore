@@ -2,22 +2,41 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.env
+
+# Environment variables and configuration
+.env*
+!.env.example
 .venv
 env/
 venv/
 ENV/
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.DS_Store
+
+# Google Cloud credentials and secrets
+service-account.json
+credentials.json
+client_secret.json
+oauth2_credentials.json
+*.key
+*.p12
+*.pem
+
+# Application uploads and transcripts
 uploads/*
 !uploads/.gitkeep
 transcripts/*
 !transcripts/.gitkeep
+
+# IDE and editor files
 .vscode/
 .idea/
+.DS_Store
+
+# Logs and temporary files
 *.log
-service-account.json
-credentials.json
+*.tmp
+*.bak
+*.backup
+
+# Security audit and testing files
+secret_scan_results.txt
+security_audit.txt

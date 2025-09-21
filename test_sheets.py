@@ -23,7 +23,7 @@ try:
         print("Client authorized")
         
         # Try to open spreadsheet
-        spreadsheet = client.open_by_key('1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU')
+        spreadsheet = client.open_by_key('insert-sheet-id')
         print(f"Spreadsheet opened: {spreadsheet.title}")
     
     except Exception as e:

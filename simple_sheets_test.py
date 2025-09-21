@@ -27,7 +27,7 @@ def test_google_sheets_access():
         print("✅ Client authorized")
         
         # Attempt to open spreadsheet
-        sheet_id = '1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU'
+        sheet_id = 'google-sheet-id'
         try:
             spreadsheet = client.open_by_key(sheet_id)
             print(f"✅ Successfully opened spreadsheet: {spreadsheet.title}")
@@ -77,7 +77,7 @@ def test_google_sheets_access():
             print("   1. The spreadsheet ID is incorrect")
             print("   2. The service account doesn't have access to the spreadsheet")
             print("\n⚠️ IMPORTANT: You need to share the spreadsheet with:")
-            print("   1053893186121-compute@developer.gserviceaccount.com")
+            print("   xxxxxxxxx-compute@developer.gserviceaccount.com")
             
         except gspread.exceptions.APIError as e:
             print(f"❌ Google Sheets API error: {str(e)}")

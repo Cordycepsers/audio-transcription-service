@@ -183,7 +183,7 @@ def main():
     print("=" * 50)
     
     # Load environment variables
-    sheet_id = os.getenv('GOOGLE_SHEET_ID', '1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU')
+    sheet_id = os.getenv('GOOGLE_SHEET_ID', 'google-sheet-id')
     worksheet_name = os.getenv('GSHEET_WORKSHEET_NAME', 'TRANSCRIPT FINAL')
     videoask_sheet_id = os.getenv('VIDEOASK_GOOGLE_SHEET_ID', sheet_id)
     videoask_worksheet_name = os.getenv('VIDEOASK_GSHEET_WORKSHEET_NAME', 'VideoAsk Responses')

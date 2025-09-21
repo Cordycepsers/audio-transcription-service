@@ -12,7 +12,7 @@ This guide details how to deploy the Flask application with VideoAsk webhook int
 
 ```bash
 # Set project ID
-export PROJECT_ID="starry-computer-457800-b8"
+export PROJECT_ID="audio-transcription-service"
 
 # Configure gcloud with your project
 gcloud config set project $PROJECT_ID
@@ -28,7 +28,7 @@ gcloud services enable \
 ## Step 2: Set Up Service Account for Google Sheets
 
 1. Make sure you've shared your Google Sheet with the service account:
-   `1053893186121-compute@developer.gserviceaccount.com`
+   `xxxxxxxxxxx-compute@developer.gserviceaccount.com`
 
 2. Ensure Google Sheets API is enabled in your project.
 
@@ -50,7 +50,7 @@ If you need to update environment variables:
 
 ```bash
 gcloud run services update flask-videoask-webhook \
-  --set-env-vars="GOOGLE_SHEET_ID=1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU,GSHEET_WORKSHEET_NAME=TRANSCRIPT FINAL"
+  --set-env-vars="GOOGLE_SHEET_ID=xxxxxxxxxxxxxxx,GSHEET_WORKSHEET_NAME=TRANSCRIPT FINAL"
 ```
 
 ## Step 5: Mount Service Account Secret

@@ -94,7 +94,7 @@ VideoAsk responses are mapped to the following Google Sheets columns:
 ### Environment Variables (Added)
 ```bash
 # VideoAsk Webhook Configuration
-VIDEOASK_GOOGLE_SHEET_ID="1s6OxhfqfQfxHH4M4ln1C1hrN3DWM8HI_-QJlY_p-KRU"
+VIDEOASK_GOOGLE_SHEET_ID="xxxxxxxxxxxxxxxxxxx"
 VIDEOASK_GSHEET_WORKSHEET_NAME="VideoAsk Responses"
 ```
 
